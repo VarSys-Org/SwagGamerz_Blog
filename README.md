@@ -1,9 +1,9 @@
 # Swagamerz Gaming Blog
 
 Gaming blog for the Swagamerz channel: guides, settings, reviews, hardware and esports.
-Built with Astro: public pages are fully static HTML (best for SEO and speed), and an admin
-dashboard plus an MCP server edit the content. Content lives as JSON in `content/` until a
-real backend is chosen; the content layer lets any backend plug in later.
+Built with Astro: public pages are fully static HTML, and an admin dashboard plus an MCP
+server edit the content. Content lives as JSON in `content/` by default; the content layer
+can also use an HTTP API.
 
 ## Commands
 

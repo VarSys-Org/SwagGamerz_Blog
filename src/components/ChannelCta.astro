@@ -53,7 +53,7 @@ const signupUrl = import.meta.env.PUBLIC_SIGNUP_URL ?? '';
 			const email = new FormData(form).get('email');
 			const endpoint = form.dataset.endpoint;
 			if (!endpoint) {
-				show('Email sign-up opens soon. Check back for new guides.', '');
+				show('Email sign-up is not available yet.', '');
 				return;
 			}
 			try {
