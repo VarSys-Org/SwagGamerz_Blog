@@ -1,6 +1,7 @@
 // Small form pieces shared by every admin screen.
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { readItems, uploadImage, type ImageRef, type MediaItem } from './api';
+import { shouldCommitTagInput } from './tag-input.ts';
 
 type Base = { label: string; hint?: string; error?: string };
 
@@ -145,7 +146,9 @@ export function TagField(props: Base & { value: string[]; onChange: (v: string[]
 				placeholder="Type a tag and press Enter"
 				onChange={(e) => setDraft(e.target.value)}
 				onKeyDown={(e) => {
-					if (e.key === 'Enter' || e.key === ',') {
+					const { nativeEvent } = e;
+					const legacyKeyCode = Reflect.get(nativeEvent, 'keyCode') as number;
+					if (shouldCommitTagInput(e.key, nativeEvent.isComposing, legacyKeyCode)) {
 						e.preventDefault();
 						add();
 					}

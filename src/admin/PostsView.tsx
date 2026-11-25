@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ApiError, readItems, writeItem, type ImageRef } from './api';
 import { checkPost } from '../lib/seo/checkPost.ts';
 import { renderBody } from '../lib/content/markdown.ts';
+import { sortChecksBySeverity } from './check-order.ts';
 import {
 	AreaField,
 	CheckList,
@@ -430,8 +431,7 @@ export default function PostsView({ lookups, siteName, startId, onChanged }: { l
 							<div className="adm-side-block">
 								<p className="adm-kicker">What to fix</p>
 								<ul className="adm-checks-list">
-									{[...seo.checks]
-										.sort((a, b) => ['bad', 'warn', 'good'].indexOf(a.level) - ['bad', 'warn', 'good'].indexOf(b.level))
+									{sortChecksBySeverity(seo.checks)
 										.map((c) => (
 											<li key={c.id} className={`adm-check-item adm-check-${c.level}`}>
 												<span className="adm-check-mark" aria-hidden="true">{c.level === 'good' ? '+' : c.level === 'warn' ? '!' : 'x'}</span>
