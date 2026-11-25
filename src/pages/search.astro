@@ -57,24 +57,18 @@ const tags = (await getTags()).slice(0, 10);
 </BaseLayout>
 
 <script>
-	type Row = { u: string; t: string; d: string; c: string; k: string; p: string };
+	import { createSearchDebouncer, createSearchIndexLoader, isSearchQueryCurrent, type SearchRow } from '../scripts/search';
 
 	const input = document.querySelector<HTMLInputElement>('#search-input');
 	const form = document.querySelector<HTMLFormElement>('[data-search-form]');
 	const list = document.querySelector<HTMLOListElement>('[data-search-results]');
 	const count = document.querySelector<HTMLElement>('[data-search-count]');
-	let rows: Row[] | null = null;
-	const searchController = new AbortController();
-	window.addEventListener('pagehide', () => searchController.abort(), { once: true });
+	const loadRows = createSearchIndexLoader(async () => {
+		const res = await fetch('/search-index.json');
+		return (await res.json()) as SearchRow[];
+	});
 
-	async function loadRows(): Promise<Row[]> {
-		if (rows) return rows;
-		const res = await fetch('/search-index.json', { signal: searchController.signal });
-		rows = (await res.json()) as Row[];
-		return rows;
-	}
-
-	function scoreRow(row: Row, words: string[]): number {
+	function scoreRow(row: SearchRow, words: string[]): number {
 		const title = row.t.toLowerCase();
 		const rest = `${row.d} ${row.k} ${row.c}`.toLowerCase();
 		let score = 0;
@@ -86,7 +80,7 @@ const tags = (await getTags()).slice(0, 10);
 		return score;
 	}
 
-	function showResults(found: Row[], query: string) {
+	function showResults(found: SearchRow[], query: string) {
 		if (!list || !count) return;
 		list.replaceChildren();
 		if (!query) {
@@ -117,10 +111,12 @@ const tags = (await getTags()).slice(0, 10);
 	}
 
 	async function runSearch(query: string) {
+		query = query.trim();
 		const words = query.toLowerCase().split(/\s+/).filter(Boolean);
 		if (!words.length) return showResults([], '');
 		try {
 			const all = await loadRows();
+			if (input && !isSearchQueryCurrent(input.value, query)) return;
 			const found = all
 				.map((row) => ({ row, score: scoreRow(row, words) }))
 				.filter((item) => item.score > 0)
@@ -128,6 +124,7 @@ const tags = (await getTags()).slice(0, 10);
 				.map((item) => item.row);
 			showResults(found, query);
 		} catch {
+			if (input && !isSearchQueryCurrent(input.value, query)) return;
 			if (count) count.textContent = 'Search could not load. Refresh the page or browse all posts.';
 		}
 	}
@@ -139,20 +136,18 @@ const tags = (await getTags()).slice(0, 10);
 	}
 	runSearch(start);
 
-	let timer: number | undefined;
+	const debouncedSearch = createSearchDebouncer((query) => {
+		const url = new URL(location.href);
+		if (query) url.searchParams.set('q', query);
+		else url.searchParams.delete('q');
+		history.replaceState(null, '', url);
+		runSearch(query);
+	});
 	input?.addEventListener('input', () => {
-		window.clearTimeout(timer);
-		timer = window.setTimeout(() => {
-			const query = input.value.trim();
-			const url = new URL(location.href);
-			if (query) url.searchParams.set('q', query);
-			else url.searchParams.delete('q');
-			history.replaceState(null, '', url);
-			runSearch(query);
-		}, 300);
+		debouncedSearch.schedule(input.value.trim());
 	});
 	form?.addEventListener('submit', (event) => {
 		event.preventDefault();
-		runSearch(input?.value.trim() ?? '');
+		debouncedSearch.submit(input?.value.trim() ?? '');
 	});
 </script>
